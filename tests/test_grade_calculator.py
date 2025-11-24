@@ -481,5 +481,257 @@ class TestIntegration(unittest.TestCase):
         self.assertGreater(grade1, grade2)
 
 
+class TestGradeCalculatorAppExtended(unittest.TestCase):
+    """Extended tests for GradeCalculatorApp to improve coverage."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.app = GradeCalculatorApp(load_sample_data=False)
+
+    def test_app_add_teacher_basic(self):
+        """Test adding a basic teacher."""
+        self.app.add_teacher("T001", "Dr. Smith", "Math")
+        self.assertIn("T001", self.app.teachers)
+        self.assertEqual(self.app.teachers["T001"].name, "Dr. Smith")
+
+    def test_app_add_teacher_all_years_lowercase(self):
+        """Test adding teacher with 'all years' in lowercase."""
+        self.app.add_teacher("T002", "Dr. Jones", "physics all years")
+        self.assertEqual(len(self.app.all_years_teachers), 1)
+
+    def test_app_add_teacher_all_years_mixed_case(self):
+        """Test adding teacher with mixed case 'All Years'."""
+        self.app.add_teacher("T003", "Dr. Brown", "Chemistry All Years")
+        self.assertEqual(len(self.app.all_years_teachers), 1)
+
+    def test_app_add_multiple_teachers(self):
+        """Test adding multiple teachers."""
+        for i in range(5):
+            self.app.add_teacher(f"T{i:03d}", f"Teacher {i}", "Subject")
+        self.assertEqual(len(self.app.teachers), 5)
+
+    def test_app_add_student_basic(self):
+        """Test adding a basic student."""
+        self.app.add_student("S001", "Alice")
+        self.assertIn("S001", self.app.students)
+        self.assertEqual(self.app.students["S001"].name, "Alice")
+
+    def test_app_add_multiple_students(self):
+        """Test adding multiple students."""
+        for i in range(10):
+            self.app.add_student(f"S{i:03d}", f"Student {i}")
+        self.assertEqual(len(self.app.students), 10)
+
+    def test_app_add_evaluation_success(self):
+        """Test successfully adding evaluation."""
+        self.app.add_student("S001", "John")
+        result = self.app.add_evaluation("S001", "E001", 15.0, 50.0)
+        self.assertTrue(result)
+
+    def test_app_add_evaluation_nonexistent_student(self):
+        """Test adding evaluation to non-existent student."""
+        result = self.app.add_evaluation("NONEXIST", "E001", 15.0, 50.0)
+        self.assertFalse(result)
+
+    def test_app_add_evaluation_invalid_grade_too_high(self):
+        """Test adding evaluation with grade too high."""
+        self.app.add_student("S001", "John")
+        result = self.app.add_evaluation("S001", "E001", 25.0, 50.0)
+        self.assertFalse(result)
+
+    def test_app_add_evaluation_invalid_grade_negative(self):
+        """Test adding evaluation with negative grade."""
+        self.app.add_student("S001", "John")
+        result = self.app.add_evaluation("S001", "E001", -5.0, 50.0)
+        self.assertFalse(result)
+
+    def test_app_add_evaluation_invalid_weight(self):
+        """Test adding evaluation with invalid weight."""
+        self.app.add_student("S001", "John")
+        result = self.app.add_evaluation("S001", "E001", 15.0, 0.0)
+        self.assertFalse(result)
+
+    def test_app_add_evaluation_default_weight(self):
+        """Test adding evaluation with default weight (100%)."""
+        self.app.add_student("S001", "John")
+        result = self.app.add_evaluation("S001", "E001", 15.0)
+        self.assertTrue(result)
+
+    def test_app_get_student_final_grade_success(self):
+        """Test successfully getting student final grade."""
+        self.app.add_student("S001", "Alice")
+        self.app.add_evaluation("S001", "E001", 15.0, 100.0)
+        result = self.app.get_student_final_grade("S001", 100.0, 0.0, True)
+        self.assertIsNotNone(result)
+        grade, details = result
+        self.assertEqual(grade, 15.0)
+
+    def test_app_get_student_final_grade_nonexistent(self):
+        """Test getting grade for non-existent student."""
+        result = self.app.get_student_final_grade("NONEXIST", 100.0, 0.0, True)
+        self.assertIsNone(result)
+
+    def test_app_get_student_final_grade_no_evaluations(self):
+        """Test getting grade for student with no evaluations."""
+        self.app.add_student("S001", "Alice")
+        result = self.app.get_student_final_grade("S001", 100.0, 0.0, True)
+        self.assertIsNone(result)
+
+    def test_app_get_student_final_grade_with_penalty(self):
+        """Test getting grade with attendance penalty."""
+        self.app.add_student("S001", "Alice")
+        self.app.add_evaluation("S001", "E001", 18.0, 100.0)
+        result = self.app.get_student_final_grade("S001", 80.0, 0.0, True)
+        self.assertIsNotNone(result)
+        grade, details = result
+        self.assertLess(grade, 18.0)
+        self.assertGreater(details['attendance_penalty'], 0)
+
+    def test_app_get_student_final_grade_with_extra_points(self):
+        """Test getting grade with extra points."""
+        self.app.add_student("S001", "Alice")
+        self.app.add_evaluation("S001", "E001", 17.0, 100.0)
+        result = self.app.get_student_final_grade("S001", 100.0, 2.0, True)
+        self.assertIsNotNone(result)
+        grade, _ = result
+        self.assertEqual(grade, 19.0)
+
+    def test_app_get_student_final_grade_without_minimum_attendance(self):
+        """Test getting grade without reaching minimum attendance."""
+        self.app.add_student("S001", "Alice")
+        self.app.add_evaluation("S001", "E001", 17.0, 100.0)
+        result = self.app.get_student_final_grade("S001", 100.0, 2.0, False)
+        self.assertIsNotNone(result)
+        grade, details = result
+        self.assertEqual(grade, 17.0)
+        self.assertEqual(details['extra_points_applied'], 0.0)
+
+    def test_app_display_grade_report_valid_student(self):
+        """Test displaying grade report for valid student."""
+        self.app.add_student("S001", "Alice")
+        self.app.add_evaluation("S001", "E001", 15.0, 100.0)
+        # Capture stdout
+        captured_output = StringIO()
+        sys.stdout = captured_output
+        self.app.display_grade_report("S001", 100.0, 0.0, True)
+        sys.stdout = sys.__stdout__
+        output = captured_output.getvalue()
+        self.assertIn("GRADE REPORT", output)
+        self.assertIn("S001", output)
+        self.assertIn("Alice", output)
+
+    def test_app_display_grade_report_nonexistent_student(self):
+        """Test displaying report for non-existent student."""
+        captured_output = StringIO()
+        sys.stdout = captured_output
+        self.app.display_grade_report("NONEXIST", 100.0, 0.0, True)
+        sys.stdout = sys.__stdout__
+        output = captured_output.getvalue()
+        self.assertIn("Error", output)
+
+    def test_app_display_grade_report_no_evaluations(self):
+        """Test displaying report for student with no evaluations."""
+        self.app.add_student("S001", "Alice")
+        captured_output = StringIO()
+        sys.stdout = captured_output
+        self.app.display_grade_report("S001", 100.0, 0.0, True)
+        sys.stdout = sys.__stdout__
+        output = captured_output.getvalue()
+        self.assertIn("Error", output)
+
+    def test_app_should_all_years_teacher_true(self):
+        """Test identifying all years teacher (positive cases)."""
+        test_cases = [
+            "Math All Years",
+            "Physics ALL YEARS",
+            "Chemistry all years",
+            "Biology ALL years",
+            "Computer Science All Years 2024"
+        ]
+        for course in test_cases:
+            self.assertTrue(self.app.should_all_years_teacher(course))
+
+    def test_app_should_all_years_teacher_false(self):
+        """Test identifying all years teacher (negative cases)."""
+        test_cases = [
+            "Math",
+            "Physics 101",
+            "Chemistry Advanced",
+            "Biology Year 1",
+            "Computer Science"
+        ]
+        for course in test_cases:
+            self.assertFalse(self.app.should_all_years_teacher(course))
+
+    def test_app_sample_data_loaded(self):
+        """Test that sample data is loaded correctly."""
+        app = GradeCalculatorApp(load_sample_data=True)
+        self.assertGreater(len(app.students), 0)
+        self.assertGreater(len(app.teachers), 0)
+        # Verify specific sample data
+        self.assertIn("S001", app.students)
+        self.assertIn("T001", app.teachers)
+
+    def test_app_empty_without_sample_data(self):
+        """Test that app is empty without sample data."""
+        app = GradeCalculatorApp(load_sample_data=False)
+        self.assertEqual(len(app.students), 0)
+        self.assertEqual(len(app.teachers), 0)
+
+    def test_app_max_concurrent_users_constant(self):
+        """Test that MAX_CONCURRENT_USERS constant is defined."""
+        self.assertEqual(GradeCalculatorApp.MAX_CONCURRENT_USERS, 50)
+
+    def test_app_grade_calculator_initialized(self):
+        """Test that grade calculator is initialized."""
+        self.assertIsNotNone(self.app.grade_calculator)
+        self.assertEqual(
+            self.app.grade_calculator.attendance_policy.minimum_attendance_percentage,
+            80.0
+        )
+
+    def test_app_multiple_evaluations_single_student(self):
+        """Test adding multiple evaluations to single student."""
+        self.app.add_student("S001", "Alice")
+        for i in range(5):
+            result = self.app.add_evaluation(f"S001", f"E{i:03d}", 15.0 + i, 20.0)
+            self.assertTrue(result)
+        result = self.app.get_student_final_grade("S001", 100.0, 0.0, True)
+        self.assertIsNotNone(result)
+
+    def test_app_add_evaluation_max_allowed(self):
+        """Test adding maximum evaluations (10) to student."""
+        self.app.add_student("S001", "Alice")
+        for i in range(10):
+            result = self.app.add_evaluation("S001", f"E{i:03d}", 15.0, 10.0)
+            self.assertTrue(result)
+        # 11th can be added but will fail when calculating grade
+        result = self.app.add_evaluation("S001", "E010", 15.0, 10.0)
+        self.assertTrue(result)  # Add succeeds
+        # But getting grade should fail due to exceeding max
+        result = self.app.get_student_final_grade("S001", 100.0, 0.0, True)
+        self.assertIsNone(result)  # Fails due to max evaluations exceeded
+
+    def test_app_complex_workflow(self):
+        """Test complex workflow with multiple students and teachers."""
+        # Add teachers
+        self.app.add_teacher("T001", "Dr. Smith", "Math")
+        self.app.add_teacher("T002", "Dr. Jones", "Physics All Years")
+        # Add students
+        for i in range(3):
+            self.app.add_student(f"S{i:03d}", f"Student {i}")
+        # Add evaluations
+        for i in range(3):
+            for j in range(3):
+                self.app.add_evaluation(f"S{i:03d}", f"E{j:03d}", 15.0 + j, 33.33)
+        # Get grades
+        for i in range(3):
+            result = self.app.get_student_final_grade(f"S{i:03d}", 90.0, 0.5, True)
+            self.assertIsNotNone(result)
+            grade, _ = result
+            self.assertGreater(grade, 14.0)
+            self.assertLessEqual(grade, 20.0)
+
+
 if __name__ == "__main__":
     unittest.main()

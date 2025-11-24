@@ -160,13 +160,17 @@ class GradeCalculatorApp:
             print(f"Error: Student {student_id} has no evaluations")
             return None
 
-        final_grade, details = self.grade_calculator.calculate_final_grade(
-            student.get_evaluations(),
-            attendance_percentage,
-            extra_points,
-            reached_minimum_attendance
-        )
-        return final_grade, details
+        try:
+            final_grade, details = self.grade_calculator.calculate_final_grade(
+                student.get_evaluations(),
+                attendance_percentage,
+                extra_points,
+                reached_minimum_attendance
+            )
+            return final_grade, details
+        except ValueError as e:
+            print(f"Error calculating grade: {str(e)}")
+            return None
 
     def display_grade_report(self, student_id: str,
                             attendance_percentage: float = 100.0,
