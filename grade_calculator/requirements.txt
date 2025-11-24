@@ -1,0 +1,11 @@
+# CS-GradeCalculator Requirements
+# No external dependencies - uses only Python standard library
+
+# Development & Testing
+unittest2>=1.1.0; python_version < '2.7'  # For older Python versions only
+
+# Optional: For code quality analysis
+# pylint>=2.0.0
+# flake8>=3.8.0
+# black>=21.0.0
+# mypy>=0.900
