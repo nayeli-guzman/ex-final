@@ -2,5 +2,5 @@ projectKey=Backend-Student-27
 serverUrl=http://213.199.42.57:9002
 serverVersion=25.10.0.114319
 dashboardUrl=http://213.199.42.57:9002/dashboard?id=Backend-Student-27
-ceTaskId=8110081b-0740-47c1-87dc-269b0ffc3908
-ceTaskUrl=http://213.199.42.57:9002/api/ce/task?id=8110081b-0740-47c1-87dc-269b0ffc3908
+ceTaskId=9cbf0dc7-3034-4e32-8427-b64e613f6c24
+ceTaskUrl=http://213.199.42.57:9002/api/ce/task?id=9cbf0dc7-3034-4e32-8427-b64e613f6c24
